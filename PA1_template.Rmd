@@ -7,19 +7,81 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r, echo=TRUE}
+unzip("activity.zip")
+fitdata <- read.csv("activity.csv")
+fitdata$date <- as.Date(fitdata$date)
+```
+
+## What is mean total number of steps taken per day?  
+```{r,echo=TRUE}
+agg <- aggregate(fitdata$steps,list(fitdata$date),sum, na.rm=TRUE)
+hist(agg[,2],breaks=30,xlab="Average Steps",main="Average Steps per Day")
+```
 
 
-
-## What is mean total number of steps taken per day?
-
-
+Mean steps per day  
+```{r,echo=TRUE}
+ mean(agg[,2],na.rm=TRUE)
+```
+Median steps per day  
+```{r,echo=TRUE}
+median(agg[,2],na.rm=TRUE)
+```
 
 ## What is the average daily activity pattern?
+```{r,echo=TRUE}
+agg <- aggregate(fitdata$steps,list(fitdata$interval),mean, na.rm=TRUE)
+#agg[2] <- agg[2]/length(unique(fitdata$date))
+plot(agg,type="l",ylab="Average Steps",xlab="Interval",main="Average Steps per Interval")
+```
 
-
+Maximum steps in a 5 minute interval:
+```{r,echo=TRUE}
+agg[which.max(agg[,2]),1]
+```
 
 ## Imputing missing values
 
 
+Number of missing data elements:
+```{r,echo=TRUE}
+fitdatana <- which(is.na(fitdata))
+length(fitdatana)
+```
+
+
+Replacing NA with rounded average steps per interval:  
+
+```{r,echo=TRUE}
+imputedata <- fitdata
+for (fitindex in 1:length(fitdatana))
+{
+    interval <- imputedata[fitdatana[fitindex],]$interval
+    imputedata[fitdatana[fitindex],]$steps <- round(agg[agg$Group.1 ==interval,]$x)
+}
+imputeagg <- aggregate(imputedata$steps,list(imputedata$date),sum, na.rm=TRUE)
+
+```
+
+Display histogram, mean, and median of imputed data, as well as length of remaining NAs to demonstrate replacement:
+
+```{r,echo=TRUE}
+hist(imputeagg[,2],breaks=30,xlab="Average Steps",main="Average Steps per Day with Imputed Values")
+ mean(imputeagg[,2],na.rm=TRUE)
+
+median(imputeagg[,2],na.rm=TRUE)
+length(which(is.na(imputedata)))
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Weekdays show a consistent wakeup time, where as weekends show more variety in time of activity startint
+```{r,echo=TRUE}
+library(ggplot2)
+fitdata$weekpart <- sub("^[^S].*", "Weekday", weekdays((fitdata$date)))
+fitdata$weekpart <- sub("^S.*", "Weekend", fitdata$weekpart)
+agg <- aggregate(fitdata$steps,list(fitdata$interval,fitdata$weekpart),mean, na.rm=TRUE)
+agg$Group.2 <- factor(agg$Group.2)
+qplot(Group.1, y = x, data=agg, facets= ~Group.2, geom="line",xlab="Inteval",ylab="Steps")
+```
